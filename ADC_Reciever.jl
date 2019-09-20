@@ -15,24 +15,25 @@ B=1715					                     #Bandwidth of the chirp signal
 f=40000					                     #Center Frequency
 T=6E-3 					                     # Chirp Pulse length
 K=B/T 					                     # Chirp rate
-dt=1/2000000;                        # The  sampling rate was found to be 2Msamples/second
-t_max=20/343;                        #max time to reach 10 meters and back is 58 miliseconds
+dt=1/2000000                                                 # The  sampling rate was found to be 2Msamples/second
+t_max=20/343                                                 #max time to reach 10 meters and back is 58 miliseconds
 t_d=T/2;
 t_max_pulse=T;
 t = collect(0:dt:t_max_pulse);
 rect(t)=(abs.(t) .<=0.5)*1.0;
 v_tx = UInt8.(round.((cos.(2*pi*(f*(t.-t_d).+0.5*K*(t.-t_d).^2)).*rect((t .-t_d)/T).+1).*127));
 
-plot(t,v_tx);                       #
+#plot(t,v_tx)                                   
 write(sp, v_tx)	 	         	        # write an array of Uint8 to the port
-s = readavailable(sp) 		          # read ADC string values from the port
-x =  Vector{UInt8}(s)               # convert the  recieved string into an array of 8-bit elements
+s = readavailable(sp) 		                # read ADC string values from the port
+x =  Vector{UInt8}(s)                           # convert the  recieved string into an array of 8-bit elements
 
-k =Vector{Int64}(undef, 1000);      #Initialize array for ADC values,ADCvalue=x[0]*256+x[1]
+len= Int(length(x)/2)
+k =Vector{Int64}(undef, len)                  # Initialize array for ADC values,ADCvalue=x[0]*256+x[1]
 
 #loop in array x to get the ADC values,loop for the length of the recieved array
 temp=1
-for j=1:1000
+for j=1:len
         global temp
         global x
         global k
@@ -42,4 +43,4 @@ end
 
 println("sample from ADC")
 plot(k)
-close(sp)			         # close the serial  port
+close(sp)			                 # close the serial  port
