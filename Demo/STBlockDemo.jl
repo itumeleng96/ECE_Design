@@ -23,7 +23,8 @@ println("Length of chirp pulse:",length(v_tx));
 #Reading from the serial ADC clear the serial buffer
 s=readavailable(sp)  #clear the serial buffer
 
-write(sp,'c')	     #start conversion 
+write(sp,'s')	     #to send and recieve something back
+write(sp,v_tx)
 while bytesavailable(sp)<1
 	continue
 	sleep(0.05)
@@ -31,9 +32,7 @@ end
 
 s = readavailable(sp)   		#print the time for conversion
 println("Reading ADC...")
-println(s)
 #Get the Values 
-
 write(sp,'p')
 while bytesavailable(sp)<1
 	continue        
@@ -73,5 +72,6 @@ println("The recieved and TRansmitted ECHOES")
 plot(v);
 println("The target location")
 #matched filter signal Processing
+
 
 

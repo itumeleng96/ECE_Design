@@ -7,27 +7,17 @@ Mpooa Moeketsi
 Mapulane 
 Tlotlisang Lekena 
 
-__The following steps are followed to implement the Single Sonar Pinger__ 
-
-_Transmit chirp pulse in Julia_
-
-- chirp pulse generated according to the requirements 
-- sent over serial Port to the Teensy 
-- Recieved signal is transmitted with the DAC0 on pin A21 
-- Goes through amplifier circuit
+Process for single SONAR Pinger Implementation According to Group 8 
  
-_Recieve the chirp Echoe on Teensy ADC pin A14_
+_Transmit a chirp pulse_
 
-- A conversion character "write(sp,'c')" is sent from the Julia to start sampling
-- The recieved signal is printed on the serialPort with write(sp,"p")
-- The recieved signal is converted to values and to be processed
+- Chirp pulse configured with requirements-with Known length
+- Send the chirp through the serial port 
+- Configure the Teensy to recieve the chirp and transmit to DAC1
 
+_Recieve the  sampled signal_ 
 
-_Process the recieved signal in Julia using FFT()_
+- Use 16 Bit resolution with DMA and send over serial port Buffer 
+- Not sure about the 
 
-- Ensure that the recieved signal and transmitted are on the same axis 
-- Do FFT()
-- Show the output with PyPlot() and do axis adjustments 
-
-_Implement Proper Logic_ to allow interaction with the User
-
+_
