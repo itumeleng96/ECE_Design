@@ -19,6 +19,7 @@ unsigned long lastInAvail;       //
 unsigned long lastDisplay;       //
 unsigned long lastBlink;         //
 unsigned long currentTime;       //
+unsigned long timeTest;
 unsigned long func_timer; // <<<<<<<<<<< Time execution of different functions
 bool          STREAM  = false;
 bool          VERBOSE =  true;
@@ -48,12 +49,14 @@ ADC_CONVERSION_SPEED  conv_speed     = ADC_CONVERSION_SPEED::VERY_HIGH_SPEED;
 
 // Processing Buffer
 uint16_t processed_buf[BUFFER_SIZE]; // processed data buffer
+// Chirp pulse from serial 
+char chirp[12001]
 
 void setup() { // =====================================================
 
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(readPin0, INPUT); // single ended
-
+  pinMode(writePin0,OUTPUT); //DAC write
   // Setup monitor pin
   pinMode(ledPin, OUTPUT);
   digitalWriteFast(ledPin, LOW); // LED low, setup start
@@ -95,15 +98,18 @@ void loop() { // ===================================================
       inByte=Serial.read();
       if(inByte == 's'){
 	for(int n=0;n<12001;n++){
-  		while(Serial.available()== false){} 
-    		char lo = Serial.read();       // read the command 
+  		while(Serial.available()== false){} //wait for chirp pulse
+    		char lo = Serial.read();            // read the command 
     		chirp[n]=lo;
   	}
 	for(int i=0;i<1;i++){
 	    for(int n=0;n<12001;n++){
 	      analogWrite(writePin0,chirp[n]);
    	     }
+	     timeTest=micros();
  	}
+	Serial.print("Time taken before ADC runs:",timeTest);
+	//Is mulithreading possible
 	if ((aorb_busy == 1) || (aorb_busy == 2)) { stop_ADC(); }
           setup_ADC_single();
           start_ADC();
@@ -112,7 +118,7 @@ void loop() { // ===================================================
           adc->printError();
           adc->resetError();
 	//need some time to finish reading and send to serial
-	 printBuffer(buf_a, 0, BUFFER_SIZE-1);
+	//write(sp,'p') is called to print from buffer
       }
       else if (inByte == 'c') { // single block conversion
           if ((aorb_busy == 1) || (aorb_busy == 2)) { stop_ADC(); }
