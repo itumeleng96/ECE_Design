@@ -7,7 +7,8 @@ Mpooa Moeketsi
 Mapulane 
 Tlotlisang Lekena 
 
-Process for single SONAR Pinger Implementation According to Group 8 
+Process for single SONAR Pinger Implementation By Group 8 
+Saved in the 1D-Sonar Pinger folder
  
 _Transmit a chirp pulse_
 
@@ -20,4 +21,7 @@ _Recieve the  sampled signal_
 - Use 16 Bit resolution with DMA and send over serial port Buffer 
 - Not sure about the 
 
-_
+Direction Finder  Implementation
+Milestone 4 -Project intitiation at 30 September
+
+
