@@ -141,10 +141,9 @@ V_ANAL[neg_freq_range] .= 0; # Zero out neg components in 2nd half of
 v_anal = ifft(V_ANAL);
 subplot(2,1,2)
 PyPlot.plot(r,abs.(v_anal) .* (0:(length(t_match)-1)).^2 )
+#PyPlot.plot(r,abs.(v_anal))
 xlim([0,10]);
 
-
-title("Analytical Signal")
 xlabel("Range in meters");
 PyPlot.draw()
 PyPlot.sleep(0.05)
