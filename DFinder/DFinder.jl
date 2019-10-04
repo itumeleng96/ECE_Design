@@ -1,5 +1,5 @@
-@time using SerialPorts
-@time using PyPlot
+using SerialPorts
+using PyPlot
 @time using FFTW;
 sp = SerialPort(list_serialports()[1], 9600) # port of the Teensy if connected
 
@@ -21,30 +21,29 @@ v_tx = UInt8.(round.((cos.(2*pi*(f*(t.-t_d).+0.5*K*(t.-t_d).^2)).*rect((t .-t_d)
 #Reading from the serial ADC clear the serial buffer
 s=readavailable(sp)  #clear the serial buffer
 PyPlot.show()
-while true
+@time while true
 write(sp,'s')	     #to send and recieve something back
 write(sp,v_tx)
 while bytesavailable(sp)<1
 	continue
-	sleep(0.05)
+	sleep(0.005)
 end
 
 s = readavailable(sp)   		#print the time for conversion
-println("Reading and Transmitting...")
-#Get the Values 
+#Get the Values from the buffer 
 write(sp,'p')
 while bytesavailable(sp)<1
 	continue        
 end 
 a=""
 i=0
-while true
+@time while true
 #	global i
 #	global a
 	x=readavailable(sp)
 	
 	if bytesavailable(sp)<1
-		sleep(0.05)
+		sleep(0.005)
 		if bytesavailable(sp)<1
 			break
 		end
@@ -132,7 +131,7 @@ xlim([0,10]);
 
 xlabel("Range in meters");
 PyPlot.draw()
-PyPlot.sleep(0.02)
+PyPlot.sleep(0.0005)
 end
 
 
