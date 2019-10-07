@@ -1,51 +1,68 @@
+function chirp()
+        #create a chirp Pulse to be sent to the Teensy and plot
+        B=1715                                                       #Bandwidth of the chirp signal
+        f=40000                                                      #Center Frequency
+        T=6E-3                                                       # Chirp Pulse length
+        K=B/T                                                        # Chirp rate
+        fs=2000000
+        dt=1/fs                              # The  sampling rate was found to be 2Msamples/second
+        t_max=20/343                         #max time to reach 10 meters and back is 58 miliseconds
+        t_d=T/2;
+        t_max_pulse=T;
+        t = collect(0:dt:t_max_pulse);
+        rect(t)=(abs.(t) .<=0.5)*1.0;
+        return  UInt8.(round.((cos.(2*pi*(f*(t.-t_d).+0.5*K*(t.-t_d).^2)).*rect((t .-t_d)/T).+1).*127));
+end
+
+function chirpMatch()
+        f=40000
+	T=6E-3                                                       # Chirp Pulse length
+        B= 1715
+	K=B/T                                                        # Chirp rate
+        fs=500000
+        dt=1/fs                                                      # The  sampling rate was found to be 2Msamples/second
+        t_max=(20/343) +10E-3                                        # max time to reach 10 meters and back is 58 miliseconds
+        t_d=T/2;
+        t_max_pulse=T;
+        rect(t)=(abs.(t) .<=0.5)*1.0;
+        t_match=collect(0:dt:t_max);
+        return cos.(2*pi*(f*(t_match.-t_d).+0.5*K*(t_match.-t_d).^2)).*rect((t_match .-t_d)/T);
+end
+
 @time using SerialPorts
-@time using PyPlot
 @time using FFTW;
-sp = SerialPort(list_serialports()[1], 9600)  # port of the Teensy if connected
+@time using PyPlot;
+sp = SerialPort(list_serialports()[1], 9600)  # USB port of the Teensy board for serial to connect
 
-#create a chirp Pulse to be sent to the Teensy and plot
-B=1715					                     #Bandwidth of the chirp signal
-f=40000					                     #Center Frequency
-T=6E-3 					                     # Chirp Pulse length
-K=B/T 					                     # Chirp rate
-fs=2000000
-dt=1/fs                                                      # The  sampling rate was found to be 2Msamples/second
-t_max=20/343                                                 #max time to reach 10 meters and back is 58 miliseconds
-t_d=T/2;
-t_max_pulse=T;
-t = collect(0:dt:t_max_pulse);
+v_tx=chirp() 				      #returns chirp pulse according to specs
 
-rect(t)=(abs.(t) .<=0.5)*1.0;
-v_tx = UInt8.(round.((cos.(2*pi*(f*(t.-t_d).+0.5*K*(t.-t_d).^2)).*rect((t .-t_d)/T).+1).*127));
-
-#println("Length of chirp pulse:",length(v_tx));
-
-
-#Reading from the serial ADC clear the serial buffer
-s=readavailable(sp)  #clear the serial buffer
+s=readavailable(sp)  			      #clear the serial buffer
 PyPlot.show()
-while true
-write(sp,'s')	     #to send and recieve something back
+
+#Start the loop 
+
+@time while true
+write(sp,'s')	                              #cmd to send and recieve something back
 write(sp,v_tx)
 while bytesavailable(sp)<1
 	continue
 	sleep(0.05)
 end
 
-s = readavailable(sp)   		#print the time for conversion
-println("Reading and Transmitting...")
-#Get the Values 
+s = readavailable(sp)   	              #print the time for ADC and DAC processing
+
+#Get the Values
 write(sp,'p')
 while bytesavailable(sp)<1
-	continue        
-end 
+	continue
+end
+
 a=""
 i=0
+					      #Getting the ADC data 
 while true
-#	global i
-#	global a
 	x=readavailable(sp)
-	
+
 	if bytesavailable(sp)<1
 		sleep(0.05)
 		if bytesavailable(sp)<1
@@ -62,61 +79,38 @@ len=length(adc)-1
 v=Vector{Int64}(undef,len)
 
 for i=1:len
-#           global v
-#           global adc
-	   #v[i] = string(adc, base = 16)
            v[i]=parse(Int64,adc[i])
-	 end
+end
 
-#make another transmit signal at the same frequnecy as recieved
-T=6E-3                                                       # Chirp Pulse length
-K=B/T                                                        # Chirp rate
-fs=500000
-dt=1/fs                                                      # The  sampling rate was found to be 2Msamples/second
-t_max=(20/343) +10E-3                                        # max time to reach 10 meters and back is 58 miliseconds
-t_d=T/2;
-t_max_pulse=T;
-
-rect(t)=(abs.(t) .<=0.5)*1.0;
-
+#make another transmit signal at the same frequency as recieved
+dt=1/500000
+t_max=(20/343) +10E-3 
 t_match=collect(0:dt:t_max);
-v_tx_match = cos.(2*pi*(f*(t_match.-t_d).+0.5*K*(t_match.-t_d).^2)).*rect((t_match .-t_d)/T);
-
+v_tx_match =chirpMatch()
 r=(343 .*t_match)/2
 
 
 #recieved signal  processing
-v= (v/65535).-0.62
-len2=length(r)-length(v)
+v= (v/65535).-0.62 		#signal has to be converted to same scale as transmitted chirp
+len2=length(r)-length(v)	#length of recieved minus the recieved to make arrays same length
 b=zeros(len2)
 
-append!(v,b)
+append!(v,b)			#add zeros to the recieved data 
 
 len3=length(v)-length(v_tx_match)
 c=zeros(len3)
 
-append!(v_tx_match,c)
-
-#println("The recieved and Transmitted ECHOES")
-#Plot the two signals on one axis
-#figure();
-#plot(v);
-#figure();
-#println("Length of recieved signal:",length(v));
-#plot(v_tx_match);
-#println("Length of transmitted signal:",length(v_tx_match));
-#println("The target location")
+append!(v_tx_match,c)		#add zeros to the created chirp that is same frequency as recieved 
 
 #matched filter signal Processing
 V_TX=fft(v_tx_match);
 V_RX=fft(v);
 H = conj(V_TX);
+
 # Apply Matched Filter to the simulated returns in Frequency Domain
 V_MF = H.*V_RX;
 v_mf = ifft(V_MF);
 v_mf = real(v_mf);
-
-#v_mf_range=v_mf .*rangeComp
 
 #Plot the time domain outputs of matched filter
 
@@ -127,7 +121,7 @@ title("Matched filter output")
 PyPlot.draw()
 xlim([0,10]);
 
-#Do analytical signal 
+#Create analytical signal
 
 V_ANAL= 2*V_MF; # make a copy and double the values
 N = length(V_MF);
@@ -141,12 +135,12 @@ V_ANAL[neg_freq_range] .= 0; # Zero out neg components in 2nd half of
 v_anal = ifft(V_ANAL);
 subplot(2,1,2)
 PyPlot.plot(r,abs.(v_anal) .* (0:(length(t_match)-1)).^2 )
-#PyPlot.plot(r,abs.(v_anal))
+#PyPlot.plot(r,abs.(v_anal))  without range compensation -
 xlim([0,10]);
 
 xlabel("Range in meters");
 PyPlot.draw()
-PyPlot.sleep(0.05)
-#sleep(0.05)
-#close(sp)
+#PyPlot.sleep(0.05)
 end
+
+
