@@ -86,6 +86,13 @@ end
 #GET THE CONVERTED DATA FROM THE BUFFER
 v = convertBuffer(sp)
 
+#GET THE DATA FROM ADC2 ARRAY
+write(sp,'q')
+while bytesavailable(sp)<1
+	continue
+end
+v2= convertBuffer(sp)
+
 #make another transmit signal at the same frequency as recieved
 dt=1/500000
 t_max=(20/343) +10E-3
@@ -94,12 +101,12 @@ v_tx_match =chirpMatch()
 r=(343 .*t_match)/2
 
 
-#recieved signal  processing
+#RECIEVED  signal1  processing
 v= (v/65535).-0.62 		     #signal has to be converted to same scale as transmitted chirp
 len2=length(r)-length(v)	 #length of recieved minus the recieved to make arrays same length
 b=zeros(len2)
 
-append!(v,b)			#add zeros to the recieved data
+append!(v,b)			         #add zeros to the recieved data
 
 len3=length(v)-length(v_tx_match)
 c=zeros(len3)
@@ -117,16 +124,40 @@ V_MF = H.*V_RX;
 v_mf = ifft(V_MF);
 v_mf = real(v_mf);
 
+#RECIEVED SIGNAL2 PROCESSING
+v2= (v2/65535).-0.62 		     #signal has to be converted to same scale as transmitted chirp
+len2=length(r)-length(v2)	 #length of recieved minus the recieved to make arrays same length
+b=zeros(len2)
+
+append!(v2,b)			         #add zeros to the recieved data
+
+v_tx_match =chirpMatch()
+len3=length(v2)-length(v_tx_match)
+c=zeros(len3)
+
+append!(v_tx_match,c)		#add zeros to the created chirp that is same frequency as recieved
+
+#MATCHED FILTER  signal Processing
+
+V_TX=fft(v_tx_match);
+V_RX_2=fft(v2);
+H = conj(V_TX);
+
+# APPLY MATCHED  Filter to the simulated returns in Frequency Domain
+V_MF_2 = H.*V_RX_2;
+v_mf_2 = ifft(V_MF_2);
+v_mf_2 = real(v_mf_2);
+
 #Plot the time domain outputs of matched filter
 
-PyPlot.clf()
-subplot(2,1,1)
-PyPlot.plot(r,v_mf)
-title("Matched filter output")
-PyPlot.draw()
-xlim([0,10]);
+#PyPlot.clf()
+#subplot(2,1,1)
+#PyPlot.plot(r,v_mf)
+#title("Matched filter output")
+#PyPlot.draw()
+#xlim([0,10]);
 
-#Create analytical signal
+#Create analytical signal of the 2 ADC's
 
 V_ANAL= 2*V_MF; # make a copy and double the values
 N = length(V_MF);
@@ -138,12 +169,35 @@ end
 
 V_ANAL[neg_freq_range] .= 0; # Zero out neg components in 2nd half of
 v_anal = ifft(V_ANAL);
-subplot(2,1,2)
-PyPlot.plot(r,abs.(v_anal) .* (0:(length(t_match)-1)).^2 )
-#PyPlot.plot(r,abs.(v_anal))  without range compensation -
+
+#2nd RECIEVER
+
+V_ANAL_2= 2*V_MF_2; # make a copy and double the values
+N = length(V_MF_2);
+if mod(N,2)==0 # case N even
+	neg_freq_range = Int(N/2):N; # Define range of “neg-freq” components
+else # case N odd
+	neg_freq_range = Int((N+1)/2):N;
+end
+
+V_ANAL_2[neg_freq_range] .= 0; # Zero out neg components in 2nd half of
+v_anal2 = ifft(V_ANAL_2);
+
+PyPlot.clf()
+subplot(2,1,1)
+PyPlot.plot(r,abs.(v_anal2) .* (0:(length(t_match)-1)).^2 )
+title("Analytic Reciever 1")
+PyPlot.draw()
 xlim([0,10]);
 
+
+subplot(2,1,2)
+PyPlot.plot(r,abs.(v_anal) .* (0:(length(t_match)-1)).^2 )
+title("Alanytic Reciever 2")
+#PyPlot.plot(r,abs.(v_anal))  without range compensation -
+xlim([0,10]);
 xlabel("Range in meters");
 PyPlot.draw()
+
 #PyPlot.sleep(0.05)
 end
