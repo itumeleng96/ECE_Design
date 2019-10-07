@@ -5,7 +5,7 @@
 #define SAMPLE_RATE 500000                  // see below maximum values
 #define SAMPLE_AVERAGING 0                  // 0, 4, 8, 16 or 32
 #define SAMPLING_GAIN 1                     // 1, 2, 4, 8, 16, 32 or 64
-#define SAMPLE_RESOLUTION 16                // 8, 10, 12 or 16
+#define SAMPLE_RESOLUTION 16                // 8, 10, 12 or 16 
 
 
 
@@ -49,7 +49,7 @@ ADC_CONVERSION_SPEED  conv_speed     = ADC_CONVERSION_SPEED::VERY_HIGH_SPEED;
 
 // Processing Buffer
 uint16_t processed_buf[BUFFER_SIZE]; // processed data buffer
-// Chirp pulse from serial
+// Chirp pulse from serial 
 char chirp[12001];
 
 void setup() { // =====================================================
@@ -65,12 +65,12 @@ void setup() { // =====================================================
   Serial.begin(Serial.baud());
   Serial.println("ADC Server (Minimal)");
   Serial.println("c to start conversion, p to print buffer");
-
+  
   // clear buffers
   memset((void*)buf_a, 0, sizeof(buf_a));
   memset((void*)buf_b, 0, sizeof(buf_b));
   memset((void*)processed_buf, 0, sizeof(buf_b));
-
+  
   // LED on, setup complete
   digitalWriteFast(ledPin, HIGH);
 
@@ -91,7 +91,7 @@ void loop() { // ===================================================
   // Commands:
   // c initiate single conversion
   // p print buffer
-  // s to recieve the chirp and transmit and DO ADC conversion
+  // s to recieve the chirp and transmit and ADC conversion
   if ((currentTime-lastInAvail) >= CHECKINPUT_INTERVAL) {
     lastInAvail = currentTime;
     if (Serial.available()) {
@@ -99,20 +99,22 @@ void loop() { // ===================================================
       if(inByte == 's'){
 	    for(int n=0;n<12001;n++){
   		  while(Serial.available()== false){} //wait for chirp pulse
-    		  char lo = Serial.read();            // read the command
+    		  char lo = Serial.read();            // read the command 
     		  chirp[n]=lo;
   	  }
-
+      //mulithreading possible
+      
       if ((aorb_busy == 1) || (aorb_busy == 2)) { stop_ADC(); }
           setup_ADC_single();
           start_ADC();
-
-      //Sending Data  to DAC
+      //Send to DAC
+      
 	    for(int i=0;i<1;i++){
 	      for(int n=0;n<12001;n++){
 	         analogWrite(writePin0,chirp[n]);
    	    }
     	}
+  	
   		  wait_ADC_single();
         stop_ADC();
         adc->printError();
@@ -133,14 +135,14 @@ void loop() { // ===================================================
       }
     } // end if serial input available
   } // end check serial in time interval
-
+    
   if ((currentTime-lastDisplay) >= DISPLAY_INTERVAL) {
     lastDisplay = currentTime;
     adc->printError();
     adc->resetError();
-  }
-
-
+  } 
+    
+  
 
 } // end loop ======================================================
 
@@ -150,20 +152,20 @@ void setup_ADC_single(void) {
   // clear buffers
   memset((void*)buf_a, 0, sizeof(buf_a));
   // Initialize the ADC
-  if (sgain >1) { adc->enablePGA(sgain, ADC_0); }  else { adc->disablePGA(ADC_0); }
+  if (sgain >1) { adc->enablePGA(sgain, ADC_0); }  else { adc->disablePGA(ADC_0); }         
   adc->setReference(Vref, ADC_0);
-  adc->setAveraging(aver);
-  adc->setResolution(res);
-  if (((Vref == ADC_REFERENCE::REF_3V3) && (Vmax > 3.29)) || ((Vref == ADC_REFERENCE::REF_1V2) && (Vmax > 1.19))) {
+  adc->setAveraging(aver); 
+  adc->setResolution(res); 
+  if (((Vref == ADC_REFERENCE::REF_3V3) && (Vmax > 3.29)) || ((Vref == ADC_REFERENCE::REF_1V2) && (Vmax > 1.19))) { 
     adc->disableCompare(ADC_0);
   } else if (Vref == ADC_REFERENCE::REF_3V3) {
     adc->enableCompare(Vmax/3.3*adc->getMaxValue(ADC_0), 0, ADC_0);
   } else if (Vref == ADC_REFERENCE::REF_1V2) {
-    adc->enableCompare(Vmax/1.2*adc->getMaxValue(ADC_0), 0, ADC_0);
+    adc->enableCompare(Vmax/1.2*adc->getMaxValue(ADC_0), 0, ADC_0);    
   }
   //adc->enableCompareRange(1.0*adc->getMaxValue(ADC_1)/3.3, 2.0*adc->getMaxValue(ADC_1)/3.3, 1, 1, ADC_1); // ready if value lies out of [1.0,2.0] V
   adc->setConversionSpeed(conv_speed, ADC_0);
-  adc->setSamplingSpeed(samp_speed, ADC_0);
+  adc->setSamplingSpeed(samp_speed, ADC_0);      
 
   // Initialize dma
   dma0.source((volatile uint16_t&)ADC0_RA);
@@ -187,7 +189,7 @@ void start_ADC(void) {
 }
 
 void stop_ADC(void) {
-    PDB0_CH0C1 = 0; // diasble ADC0 pre triggers
+    PDB0_CH0C1 = 0; // diasble ADC0 pre triggers    
     dma0.disable();
     adc->disableDMA(ADC_0);
     adc->adc0->stopPDB();
@@ -218,13 +220,13 @@ void dma0_isr_single(void) {
 void printBuffer(uint16_t *buffer, size_t start, size_t end) {
   size_t i;
   if (VERBOSE) {
-    for (i = start; i <= end; i++) {
-      Serial.println(buffer[i]);
+    for (i = start; i <= end; i++) { 
+      Serial.println(buffer[i]); 
       //Serial.println((buffer[i] >> 8) & 0xFF); // Send the upper byte first
       //Serial.println((buffer[i] & 0xFF));
-
+      
       }
-
+         
   } else {
     for (i = start; i <= end; i++) {
       serial16Print(buffer[i]);
@@ -235,9 +237,9 @@ void printBuffer(uint16_t *buffer, size_t start, size_t end) {
 void print2Buffer(uint16_t *buffer1,uint16_t *buffer2, size_t start, size_t end) {
   size_t i;
   if (VERBOSE) {
-    for (i = start; i <= end; i++) {
-      Serial.print(buffer1[i]);
-      Serial.print(",");
+    for (i = start; i <= end; i++) { 
+      Serial.print(buffer1[i]); 
+      Serial.print(","); 
       Serial.println(buffer2[i]);}
   } else if (BINARY) {
     for (i = start; i <= end; i++) {
@@ -260,13 +262,13 @@ void print2Buffer(uint16_t *buffer1,uint16_t *buffer2, size_t start, size_t end)
 void serialFloatPrint(float f) {
   byte * b = (byte *) &f;
   for(int i=3; i>=0; i--) {
-
+    
     byte b1 = (b[i] >> 4) & 0x0f;
     byte b2 = (b[i] & 0x0f);
-
+    
     char c1 = (b1 < 10) ? ('0' + b1) : 'A' + b1 - 10;
     char c2 = (b2 < 10) ? ('0' + b2) : 'A' + b2 - 10;
-
+    
     Serial.print(c1);
     Serial.print(c2);
   }
@@ -288,13 +290,13 @@ void serialBytePrint(byte b) {
 void serial16Print(uint16_t u) {
   byte * b = (byte *) &u;
   for(int i=1; i>=0; i--) {
-
+    
     byte b1 = (b[i] >> 4) & 0x0f;
     byte b2 = (b[i] & 0x0f);
-
+    
     char c1 = (b1 < 10) ? ('0' + b1) : 'A' + b1 - 10;
     char c2 = (b2 < 10) ? ('0' + b2) : 'A' + b2 - 10;
-
+    
     Serial.print(c1);
     Serial.print(c2);
   }
@@ -304,13 +306,13 @@ void serial16Print(uint16_t u) {
 void serialLongPrint(unsigned long l) {
   byte * b = (byte *) &l;
   for(int i=3; i>=0; i--) {
-
+    
     byte b1 = (b[i] >> 4) & 0x0f;
     byte b2 = (b[i] & 0x0f);
-
+    
     char c1 = (b1 < 10) ? ('0' + b1) : 'A' + b1 - 10;
     char c2 = (b2 < 10) ? ('0' + b2) : 'A' + b2 - 10;
-
+    
     Serial.print(c1);
     Serial.print(c2);
   }
