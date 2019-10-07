@@ -93,7 +93,7 @@ void loop() { // ===================================================
   // Commands:
   // c initiate single conversion
   // p print buffer
-  // s to recieve the chirp and transmit and DO ADC conversion
+  // s to recieve the chirp and transmit and DO 2 ADC conversion simultenously
   if ((currentTime-lastInAvail) >= CHECKINPUT_INTERVAL) {
     lastInAvail = currentTime;
     if (Serial.available()) {
@@ -109,7 +109,6 @@ void loop() { // ===================================================
       if ((aorb_busy == 1) || (aorb_busy == 2)) { stop_ADC(); }
           setup_ADC_single();
           start_ADC();
-
       //Sending Data  to DAC
 	    for(int i=0;i<1;i++){
 	      for(int n=0;n<12001;n++){
@@ -120,13 +119,13 @@ void loop() { // ===================================================
         stop_ADC();
         adc->printError();
         adc->resetError();
-	    // read from second ADC
+	    /////////////// Read Data for second Array ///////////////////////
       if ((aorb_busy == 1) || (aorb_busy == 2)) { stop_ADC(); }
           setup_ADC_single2();
           start_ADC2();
 
-      //Sending Data  to DAC
-	    for(int i=0;i<1;i++){
+      /////////////Sending Data  to DAC for the second time  //////////////
+      for(int i=0;i<1;i++){
 	      for(int n=0;n<12001;n++){
 	         analogWrite(writePin0,chirp[n]);
    	    }
@@ -141,21 +140,17 @@ void loop() { // ===================================================
       }else if (inByte == 'q') { // print buffer
           printBuffer(buf_b, 0, BUFFER_SIZE-1);
       }
-    } // end if serial input available
-  } // end check serial in time interval
+    }
+  }
 
   if ((currentTime-lastDisplay) >= DISPLAY_INTERVAL) {
     lastDisplay = currentTime;
     adc->printError();
     adc->resetError();
   }
-
-
-
 } // end loop ======================================================
 
-
-// ADC from pin read pin 0
+///ADC setup //////////////////////
 void setup_ADC_single(void) {
   // clear buffers
   memset((void*)buf_a, 0, sizeof(buf_a));

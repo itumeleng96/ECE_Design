@@ -16,9 +16,9 @@ end
 
 function chirpMatch()
         f=40000
-	T=6E-3                                                       # Chirp Pulse length
+	      T=6E-3                                                       # Chirp Pulse length
         B= 1715
-	K=B/T                                                        # Chirp rate
+	      K=B/T                                                        # Chirp rate
         fs=500000
         dt=1/fs                                                      # The  sampling rate was found to be 2Msamples/second
         t_max=(20/343) +10E-3                                        # max time to reach 10 meters and back is 58 miliseconds
@@ -29,85 +29,90 @@ function chirpMatch()
         return cos.(2*pi*(f*(t_match.-t_d).+0.5*K*(t_match.-t_d).^2)).*rect((t_match .-t_d)/T);
 end
 
+function convertBuffer(sp)
+  a=""
+  i=0
+  #Getting the ADC data
+  while true
+	 x=readavailable(sp)      #read from the buffer
+	  if bytesavailable(sp)<1 #check if there is still data in the buffer
+		    sleep(0.05)
+		    if bytesavailable(sp)<1
+			     break
+		    end
+	  end
+	  a=string(a,x)
+  end
+  adc=split(a,"\r\n")
+  len=length(adc)-1
+  v=Vector{Int64}(undef,len)
+  for i=1:len
+           v[i]=parse(Int64,adc[i])
+  end
+  return v
+end
+
 @time using SerialPorts
 @time using FFTW;
 @time using PyPlot;
 sp = SerialPort(list_serialports()[1], 9600)  # USB port of the Teensy board for serial to connect
 
-v_tx=chirp() 				      #returns chirp pulse according to specs
-
-s=readavailable(sp)  			      #clear the serial buffer
+v_tx=chirp() 	                    			      #returns chirp pulse according to specs
+s=readavailable(sp)  			                    #clear the serial buffer
 PyPlot.show()
 
-#Start the loop 
 
-@time while true
-write(sp,'s')	                              #cmd to send and recieve something back
+#START THE LOOP
+
+while true
+
+#command to send  a chirp and save two ADC arrays
+write(sp,'s')
 write(sp,v_tx)
 while bytesavailable(sp)<1
 	continue
 	sleep(0.05)
 end
 
-s = readavailable(sp)   	              #print the time for ADC and DAC processing
+#Print the Time conversion of the ADC
+s = readavailable(sp)
 
-#Get the Values
+#Get the Values with command 'p'
 write(sp,'p')
 while bytesavailable(sp)<1
 	continue
 end
 
-a=""
-i=0
-					      #Getting the ADC data 
-while true
-	x=readavailable(sp)
-
-	if bytesavailable(sp)<1
-		sleep(0.05)
-		if bytesavailable(sp)<1
-			break
-		end
-	end
-	a=string(a,x)
-end
-
-
-adc=split(a,"\r\n")
-
-len=length(adc)-1
-v=Vector{Int64}(undef,len)
-
-for i=1:len
-           v[i]=parse(Int64,adc[i])
-end
+#GET THE CONVERTED DATA FROM THE BUFFER
+v = convertBuffer(sp)
 
 #make another transmit signal at the same frequency as recieved
 dt=1/500000
-t_max=(20/343) +10E-3 
+t_max=(20/343) +10E-3
 t_match=collect(0:dt:t_max);
 v_tx_match =chirpMatch()
 r=(343 .*t_match)/2
 
 
 #recieved signal  processing
-v= (v/65535).-0.62 		#signal has to be converted to same scale as transmitted chirp
-len2=length(r)-length(v)	#length of recieved minus the recieved to make arrays same length
+v= (v/65535).-0.62 		     #signal has to be converted to same scale as transmitted chirp
+len2=length(r)-length(v)	 #length of recieved minus the recieved to make arrays same length
 b=zeros(len2)
 
-append!(v,b)			#add zeros to the recieved data 
+append!(v,b)			#add zeros to the recieved data
 
 len3=length(v)-length(v_tx_match)
 c=zeros(len3)
 
-append!(v_tx_match,c)		#add zeros to the created chirp that is same frequency as recieved 
+append!(v_tx_match,c)		#add zeros to the created chirp that is same frequency as recieved
 
-#matched filter signal Processing
+#MATCHED FILTER  signal Processing
+
 V_TX=fft(v_tx_match);
 V_RX=fft(v);
 H = conj(V_TX);
 
-# Apply Matched Filter to the simulated returns in Frequency Domain
+# APPLY MATCHED  Filter to the simulated returns in Frequency Domain
 V_MF = H.*V_RX;
 v_mf = ifft(V_MF);
 v_mf = real(v_mf);
@@ -142,5 +147,3 @@ xlabel("Range in meters");
 PyPlot.draw()
 #PyPlot.sleep(0.05)
 end
-
-
