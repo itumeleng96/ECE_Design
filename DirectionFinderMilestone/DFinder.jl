@@ -172,26 +172,42 @@ end
 V_ANAL_2[neg_freq_range] .= 0; # Zero out neg components in 2nd half of
 v_anal2 = ifft(V_ANAL_2);
 
+#PyPlot.clf()
+#subplot(2,1,1)
+#PyPlot.plot(r,abs.(v_anal2) .* (0:(length(t_match)-1)).^2 )
+#title("Reciever 1")
+#PyPlot.draw()
+#xlim([0,10]);
+#ylim([0,0.5e9]);
+
+#subplot(2,1,2)
+#PyPlot.plot(r,abs.(v_anal) .* (0:(length(t_match)-1)).^2 )
+#title("Reciever 2")
+#PyPlot.plot(r,abs.(v_anal))  without range compensation
+#xlim([0,10]);
+#ylim([0,0.5e9]);
+#xlabel("Range in meters");
+#PyPlot.draw()
+#println("Reading and Transmitting....")
+
+#Conversion to Baseband
+j=im;
+f0=40000;
+v_bb_1=v_anal.*exp.(-j*2*pi*f0*t_match);
+v_bb_2=v_anal2.*exp.(-j*2*pi*f0*t_match);
+
+#Plot Baseband
 PyPlot.clf()
 subplot(2,1,1)
-PyPlot.plot(r,abs.(v_anal2) .* (0:(length(t_match)-1)).^2 )
-title("Reciever 1")
+PyPlot.plot(r,abs.(v_bb_2))
 PyPlot.draw()
-xlim([0,10]);
-ylim([0,0.5e9]);
-
 subplot(2,1,2)
-PyPlot.plot(r,abs.(v_anal) .* (0:(length(t_match)-1)).^2 )
-title("Reciever 2")
-#PyPlot.plot(r,abs.(v_anal))  without range compensation
-xlim([0,10]);
-ylim([0,0.5e9]);
-xlabel("Range in meters");
+#PyPlot.plot(r,abs.(v_bb_2))
+plot(r,angle.(v_bb_2))
 PyPlot.draw()
-println("Reading and Transmitting....")
 
-#Phase angle calculations
 #Distance between the two recievers d=1.7cm ,=0.017 m
+
 
 
 end
