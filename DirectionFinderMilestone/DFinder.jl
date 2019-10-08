@@ -52,15 +52,14 @@ function convertBuffer(sp)
   return v
 end
 
-@time using SerialPorts
-@time using FFTW;
-@time using PyPlot;
+using SerialPorts
+using FFTW;
+using PyPlot;
 sp = SerialPort(list_serialports()[1], 9600)  # USB port of the Teensy board for serial to connect
 
 v_tx=chirp() 	                    			      #returns chirp pulse according to specs
 s=readavailable(sp)  			                    #clear the serial buffer
-PyPlot.show()
-
+#PyPlot.show()
 
 #START THE LOOP
 
@@ -71,7 +70,7 @@ write(sp,'s')
 write(sp,v_tx)
 while bytesavailable(sp)<1
 	continue
-	sleep(0.005)
+	sleep(0.05)
 end
 
 #Print the Time conversion of the ADC
@@ -113,32 +112,30 @@ c=zeros(len3)
 
 append!(v_tx_match,c)		#add zeros to the created chirp that is same frequency as recieved
 
-#MATCHED FILTER  signal Processing
+#MATCHED FILTER  signal Processing FOR ADC1
 
 V_TX=fft(v_tx_match);
 V_RX=fft(v);
 H = conj(V_TX);
 
-# APPLY MATCHED  Filter to the simulated returns in Frequency Domain
+# APPLY MATCHED  Filter for ADC1
 V_MF = H.*V_RX;
 v_mf = ifft(V_MF);
 v_mf = real(v_mf);
 
 #RECIEVED SIGNAL2 PROCESSING
-v2= (v2/65535).-0.62 		     #signal has to be converted to same scale as transmitted chirp
+v2= (v2/65535).-0.63 		     #signal has to be converted to same scale as transmitted chirp
 len2=length(r)-length(v2)	 #length of recieved minus the recieved to make arrays same length
 b=zeros(len2)
 
-
 append!(v2,b)			         #add zeros to the recieved data
+
 v_tx_match =chirpMatch()
 len3=length(v2)-length(v_tx_match)
 c=zeros(len3)
-
 append!(v_tx_match,c)		#add zeros to the created chirp that is same frequency as recieved
 
-#MATCHED FILTER  signal Processing
-
+#MATCHED FILTER  signal Processing FOR ADC2
 V_TX=fft(v_tx_match);
 V_RX_2=fft(v2);
 H = conj(V_TX);
@@ -148,16 +145,8 @@ V_MF_2 = H.*V_RX_2;
 v_mf_2 = ifft(V_MF_2);
 v_mf_2 = real(v_mf_2);
 
-#Plot the time domain outputs of matched filter
 
-#PyPlot.clf()
-#subplot(2,1,1)
-#PyPlot.plot(r,v_mf)
-#title("Matched filter output")
-#PyPlot.draw()
-#xlim([0,10]);
-
-#Create analytical signal of the 2 ADC's
+#Create ANALYTICAL signal of the 2 ADC's
 
 V_ANAL= 2*V_MF; # make a copy and double the values
 N = length(V_MF);
@@ -188,19 +177,21 @@ subplot(2,1,1)
 PyPlot.plot(r,abs.(v_anal2) .* (0:(length(t_match)-1)).^2 )
 title("Reciever 1")
 PyPlot.draw()
-ylim([0,0.5e9]);
 xlim([0,10]);
-
+ylim([0,0.5e9]);
 
 subplot(2,1,2)
 PyPlot.plot(r,abs.(v_anal) .* (0:(length(t_match)-1)).^2 )
 title("Reciever 2")
-#PyPlot.plot(r,abs.(v_anal))  without range compensation -
+#PyPlot.plot(r,abs.(v_anal))  without range compensation
 xlim([0,10]);
 ylim([0,0.5e9]);
-
 xlabel("Range in meters");
 PyPlot.draw()
-println("....")
-#PyPlot.sleep(0.05)
+println("Reading and Transmitting....")
+
+#Phase angle calculations
+#Distance between the two recievers d=1.7cm ,=0.017 m
+
+
 end
