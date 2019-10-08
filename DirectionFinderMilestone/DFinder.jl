@@ -64,14 +64,14 @@ PyPlot.show()
 
 #START THE LOOP
 
-while true
+@time while true
 
 #command to send  a chirp and save two ADC arrays
 write(sp,'s')
 write(sp,v_tx)
 while bytesavailable(sp)<1
 	continue
-	sleep(0.05)
+	sleep(0.005)
 end
 
 #Print the Time conversion of the ADC
@@ -129,8 +129,8 @@ v2= (v2/65535).-0.62 		     #signal has to be converted to same scale as transmi
 len2=length(r)-length(v2)	 #length of recieved minus the recieved to make arrays same length
 b=zeros(len2)
 
-append!(v2,b)			         #add zeros to the recieved data
 
+append!(v2,b)			         #add zeros to the recieved data
 v_tx_match =chirpMatch()
 len3=length(v2)-length(v_tx_match)
 c=zeros(len3)
@@ -186,18 +186,21 @@ v_anal2 = ifft(V_ANAL_2);
 PyPlot.clf()
 subplot(2,1,1)
 PyPlot.plot(r,abs.(v_anal2) .* (0:(length(t_match)-1)).^2 )
-title("Analytic Reciever 1")
+title("Reciever 1")
 PyPlot.draw()
+ylim([0,0.5e9]);
 xlim([0,10]);
 
 
 subplot(2,1,2)
 PyPlot.plot(r,abs.(v_anal) .* (0:(length(t_match)-1)).^2 )
-title("Alanytic Reciever 2")
+title("Reciever 2")
 #PyPlot.plot(r,abs.(v_anal))  without range compensation -
 xlim([0,10]);
+ylim([0,0.5e9]);
+
 xlabel("Range in meters");
 PyPlot.draw()
-
+println("....")
 #PyPlot.sleep(0.05)
 end
