@@ -183,24 +183,45 @@ end
 V_ANAL_2[neg_freq_range] .= 0; # Zero out neg components in 2nd half of
 v_anal2 = ifft(V_ANAL_2);
 
+
+#Baseband calculations
+j=im;
+f0=40000;
+v_bb_1=v_anal.*exp.(-j*2*pi*f0*t_match);
+v_bb_2=v_anal2.*exp.(-j*2*pi*f0*t_match);
+
+#Wrapped phase difference
+delta_psi = angle.( v_bb_1 .* conj(v_bb_2))
+
 PyPlot.clf()
-subplot(2,1,1)
-PyPlot.plot(r,abs.(v_anal2) .* (0:(length(t_match)-1)).^2 )
+subplot(2,2,1)
+PyPlot.plot(r,abs.(v_anal) .* (0:(length(t_match)-1)).^2 )
 title("Reciever 1")
-PyPlot.draw()
 ylim([0,0.5e9]);
 xlim([0,10]);
+PyPlot.draw()
 
 
-subplot(2,1,2)
-PyPlot.plot(r,abs.(v_anal) .* (0:(length(t_match)-1)).^2 )
+subplot(2,2,2)
+PyPlot.plot(r,abs.(v_anal2) .* (0:(length(t_match)-1)).^2 )
 title("Reciever 2")
 #PyPlot.plot(r,abs.(v_anal))  without range compensation -
 xlim([0,10]);
 ylim([0,0.5e9]);
-
 xlabel("Range in meters");
 PyPlot.draw()
-println("....")
+
+subplot(2,2,3)
+PyPlot.plot(r,angle.(v_bb_1))
+title("Reciever 1")
+xlim([0,10]);
+PyPlot.draw()
+
+subplot(2,2,4)
+PyPlot.plot(r,angle.(v_bb_2))
+title("Reciever 2")
+xlim([0,10]);
+PyPlot.draw()
+println("reading and transmitting...")
 #PyPlot.sleep(0.05)
 end
