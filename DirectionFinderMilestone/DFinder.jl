@@ -13,7 +13,6 @@ function chirp()
         rect(t)=(abs.(t) .<=0.5)*1.0;
         return  UInt8.(round.((cos.(2*pi*(f*(t.-t_d).+0.5*K*(t.-t_d).^2)).*rect((t .-t_d)/T).+1).*127));
 end
-
 function chirpMatch()
         f=40000
 	      T=6E-3                                                       # Chirp Pulse length
@@ -28,7 +27,6 @@ function chirpMatch()
         t_match=collect(0:dt:t_max);
         return cos.(2*pi*(f*(t_match.-t_d).+0.5*K*(t_match.-t_d).^2)).*rect((t_match .-t_d)/T);
 end
-
 function convertBuffer(sp)
   a=""
   i=0
@@ -41,7 +39,9 @@ function convertBuffer(sp)
 			     break
 		    end
 	  end
-	  a=string(a,x)
+    if x!= ""
+	   a=string(a,x)
+    end
   end
   adc=split(a,"\r\n")
   len=length(adc)-1
@@ -64,7 +64,7 @@ PyPlot.show()
 
 #START THE LOOP
 
-@time while true
+while true
 
 #command to send  a chirp and save two ADC arrays
 write(sp,'s')
@@ -148,14 +148,6 @@ V_MF_2 = H.*V_RX_2;
 v_mf_2 = ifft(V_MF_2);
 v_mf_2 = real(v_mf_2);
 
-#Plot the time domain outputs of matched filter
-
-#PyPlot.clf()
-#subplot(2,1,1)
-#PyPlot.plot(r,v_mf)
-#title("Matched filter output")
-#PyPlot.draw()
-#xlim([0,10]);
 
 #Create analytical signal of the 2 ADC's
 
@@ -183,24 +175,45 @@ end
 V_ANAL_2[neg_freq_range] .= 0; # Zero out neg components in 2nd half of
 v_anal2 = ifft(V_ANAL_2);
 
+#Conversion to Baseband
+j=im;
+f0=40000;
+v_bb_1=v_anal.*exp.(-j*2*pi*f0*t_match);
+v_bb_2=v_anal2.*exp.(-j*2*pi*f0*t_match);
+
+#Extract the Phase at the peaks
+
+
 PyPlot.clf()
-subplot(2,1,1)
-PyPlot.plot(r,abs.(v_anal2) .* (0:(length(t_match)-1)).^2 )
 title("Reciever 1")
+subplot(3,2,1)
+PyPlot.plot(r,abs.(v_anal))
 PyPlot.draw()
-ylim([0,0.5e9]);
-xlim([0,10]);
 
-
-subplot(2,1,2)
-PyPlot.plot(r,abs.(v_anal) .* (0:(length(t_match)-1)).^2 )
 title("Reciever 2")
-#PyPlot.plot(r,abs.(v_anal))  without range compensation -
-xlim([0,10]);
-ylim([0,0.5e9]);
-
-xlabel("Range in meters");
+subplot(3,2,2)
+PyPlot.plot(r,abs.(v_anal2))
 PyPlot.draw()
-println("....")
-#PyPlot.sleep(0.05)
+
+subplot(3,2,3)
+PyPlot.plot(r,abs.(v_bb_1))
+title("Baseband1")
+PyPlot.draw()
+
+
+subplot(3,2,4)
+PyPlot.plot(r,abs.(v_bb_2))
+title("Baseband2")
+PyPlot.draw()
+
+subplot(3,2,5)
+PyPlot.plot(r,angle.(v_bb_1))
+title("Reciever 2")
+PyPlot.draw()
+
+subplot(3,2,6)
+PyPlot.plot(r,angle.(v_bb_2))
+PyPlot.draw()
+println(".")
+PyPlot.sleep(0.05)
 end
