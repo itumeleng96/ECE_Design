@@ -1,3 +1,4 @@
+
 function chirp()
         #create a chirp Pulse to be sent to the Teensy and plot
         B=1715                                                       #Bandwidth of the chirp signal
@@ -51,9 +52,9 @@ function convertBuffer(sp)
   return v
 end
 
-using SerialPorts
-using FFTW;
-using PyPlot;
+@time using SerialPorts
+@time using FFTW;
+@time using PyPlot;
 sp = SerialPort(list_serialports()[1], 9600)  # USB port of the Teensy board for serial to connect
 
 v_tx=chirp() 	                    			      #returns chirp pulse according to specs

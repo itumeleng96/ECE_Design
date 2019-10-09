@@ -39,7 +39,8 @@ DMAChannel dma1;
 // Variables for ADC0
 DMAMEM static uint16_t buf_a[BUFFER_SIZE]; // buffer a
 DMAMEM static uint16_t buf_b[BUFFER_SIZE]; // buffer b
-volatile uint8_t          aorb_busy  = 0;      //
+volatile uint8_t          a_busy     = 0;      //
+volatile uint8_t          b_busy     = 0;      //
 volatile uint8_t          a_full     = 0;      //
 volatile uint8_t          b_full     = 0;      //
 uint32_t                    freq     = SAMPLE_RATE;
@@ -101,28 +102,31 @@ void loop() { // ===================================================
       inByte=Serial.read();
 
       if(inByte == 's'){
-	    for(int n=0;n<12001;n++){
-  		  while(Serial.available()== false){} //wait for chirp pulse
-    		  char lo = Serial.read();            // read the command
-    		  chirp[n]=lo;
-  	  }
+      for(int n=0;n<12001;n++){
+        while(Serial.available()== false){} //wait for chirp pulse
+          char lo = Serial.read();            // read the command
+          chirp[n]=lo;
+      }
 
-      if ((aorb_busy == 1) || (aorb_busy == 2)) { stop_ADC(); }
-          //Setup the 1st ADC
-          setup_ADC_single();
-          setup_ADC_single2();
-          //Setup the 2nd ADC
-          start_ADC();
-          start_ADC2();
-
-	    for(int i=0;i<1;i++){
-	      for(int n=0;n<12001;n++){
-	         analogWrite(writePin0,chirp[n]);
-   	    }
-    	}
-  		  wait_ADC_single();
-        wait_ADC_single2();
+      if ((a_busy == 1) || (b_busy == 2)) {
         stop_ADC();
+        stop_ADC2();
+      }
+      for(int i=0;i<1;i++){
+        for(int n=0;n<12001;n++){
+           analogWrite(writePin0,chirp[n]);
+        }
+      }
+        setup_ADC_single();
+        start_ADC();
+        wait_ADC_single();
+        stop_ADC();
+        adc->printError();
+        adc->resetError();
+
+        setup_ADC_single2();
+        start_ADC2();
+        wait_ADC_single2();
         stop_ADC2();
         adc->printError();
         adc->resetError();
@@ -173,7 +177,7 @@ void setup_ADC_single(void) {
 
 void start_ADC(void) {
     // Start adc
-    aorb_busy  = 1;
+    a_busy    = 1;
     a_full    = 0;
     //b_full    = 0;
     adc->adc0->startSingleRead(readPin0);
@@ -188,7 +192,7 @@ void stop_ADC(void) {
     dma0.disable();
     adc->disableDMA(ADC_0);
     adc->adc0->stopPDB();
-    aorb_busy = 0;
+    a_busy = 0;
 }
 
 void wait_ADC_single() {
@@ -197,7 +201,7 @@ void wait_ADC_single() {
   while (!a_full) {
     end_time = micros();
     if ((end_time - start_time) > 1100000) {
-      Serial.printf("Timeout %d %d\n", a_full, aorb_busy);
+      Serial.printf("Timeout %d %d\n", a_full, a_busy);
       break;
     }
   }
@@ -205,12 +209,11 @@ void wait_ADC_single() {
 }
 
 void dma0_isr_single(void) {
-  aorb_busy = 0;
-     a_full = 1;
+  a_busy = 0;
+  a_full = 1;
   dma0.clearInterrupt(); // takes more than 0.5 micro seconds
   dma0.clearComplete(); // takes about ? micro seconds
 }
-
 //////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
 //////////////Read from ADC 2 ////////////////////////////////
@@ -230,7 +233,6 @@ void setup_ADC_single2(void) {
   } else if (Vref == ADC_REFERENCE::REF_1V2) {
     adc->enableCompare(Vmax/1.2*adc->getMaxValue(ADC_1), 0, ADC_1);
   }
-  //adc->enableCompareRange(1.0*adc->getMaxValue(ADC_1)/3.3, 2.0*adc->getMaxValue(ADC_1)/3.3, 1, 1, ADC_1); // ready if value lies out of [1.0,2.0] V
   adc->setConversionSpeed(conv_speed, ADC_1);
   adc->setSamplingSpeed(samp_speed, ADC_1);
 
@@ -240,12 +242,12 @@ void setup_ADC_single2(void) {
   dma1.triggerAtHardwareEvent(DMAMUX_SOURCE_ADC1);
   dma1.interruptAtCompletion();
   //dma0.disableOnCompletion();
-  dma1.attachInterrupt(&dma0_isr_single2);
+  dma1.attachInterrupt(&dma1_isr_single);
 }
 
 void start_ADC2(void) {
     // Start adc
-    aorb_busy  = 1;
+    b_busy  = 1;
     //a_full    = 0;
     b_full    = 0;
     adc->adc1->startSingleRead(readPin1);
@@ -256,11 +258,11 @@ void start_ADC2(void) {
 }
 
 void stop_ADC2(void) {
-    PDB0_CH0C1 = 0; // diasble ADC0 pre triggers
+    PDB0_CH1C1 = 0;
     dma1.disable();
     adc->disableDMA(ADC_1);
     adc->adc1->stopPDB();
-    aorb_busy = 0;
+    b_busy = 0;
 }
 
 void wait_ADC_single2() {
@@ -276,11 +278,11 @@ void wait_ADC_single2() {
   //Serial.printf("Conversion complete in %d us\n", end_time-start_time);
 }
 
-void dma0_isr_single2(void) {
-  aorb_busy = 0;
+void dma1_isr_single(void) {
+     b_busy = 0;
      b_full = 1;
   dma1.clearInterrupt(); // takes more than 0.5 micro seconds
-  dma1.clearComplete(); // takes about ? micro seconds
+  dma1.clearComplete();  // takes about ? micro seconds
 }
 ////////////////////////////////////////////////////////////////////
 void printBuffer(uint16_t *buffer, size_t start, size_t end) {
