@@ -44,7 +44,7 @@ function convertBuffer(sp)
 	  a=string(a,x)
   end
   adc=split(a,"\r\n")
-  len=length(adc)-1
+  len=length(adc)-2
   v=Vector{Int64}(undef,len)
   for i=1:len
            v[i]=parse(Int64,adc[i])
@@ -148,15 +148,6 @@ V_MF_2 = H.*V_RX_2;
 v_mf_2 = ifft(V_MF_2);
 v_mf_2 = real(v_mf_2);
 
-#Plot the time domain outputs of matched filter
-
-#PyPlot.clf()
-#subplot(2,1,1)
-#PyPlot.plot(r,v_mf)
-#title("Matched filter output")
-#PyPlot.draw()
-#xlim([0,10]);
-
 #Create analytical signal of the 2 ADC's
 
 V_ANAL= 2*V_MF; # make a copy and double the values
@@ -192,35 +183,36 @@ v_bb_2=v_anal2.*exp.(-j*2*pi*f0*t_match);
 
 #Wrapped phase difference
 delta_psi = angle.( v_bb_1 .* conj(v_bb_2))
+a=0
+b=10
+
 
 PyPlot.clf()
 subplot(2,2,1)
-PyPlot.plot(r,abs.(v_anal) .* (0:(length(t_match)-1)).^2 )
-title("Reciever 1")
-ylim([0,0.5e9]);
-xlim([0,10]);
-PyPlot.draw()
+PyPlot.plot(r,abs.(v_bb_1) )
+title("Analytical Signals")
 
-
-subplot(2,2,2)
-PyPlot.plot(r,abs.(v_anal2) .* (0:(length(t_match)-1)).^2 )
-title("Reciever 2")
-#PyPlot.plot(r,abs.(v_anal))  without range compensation -
-xlim([0,10]);
-ylim([0,0.5e9]);
+PyPlot.plot(r,abs.(v_bb_2) )
+xlim([a,b]);
+#ylim([0,0.5e9]);
 xlabel("Range in meters");
 PyPlot.draw()
 
-subplot(2,2,3)
+subplot(2,2,2)
 PyPlot.plot(r,angle.(v_bb_1))
-title("Reciever 1")
-xlim([0,10]);
+title("Angle 1")
+xlim([a,b]);
 PyPlot.draw()
 
 subplot(2,2,4)
 PyPlot.plot(r,angle.(v_bb_2))
-title("Reciever 2")
-xlim([0,10]);
+title("Angle 2")
+xlim([a,b]);
+PyPlot.draw()
+
+subplot(2,2,3)
+PyPlot.plot(r,delta_psi)
+title("Delta PSI")
 PyPlot.draw()
 println("reading and transmitting...")
 #PyPlot.sleep(0.05)

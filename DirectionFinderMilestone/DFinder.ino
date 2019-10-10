@@ -18,7 +18,7 @@
 unsigned long lastInAvail;       //s = string(12345, base = 16)
 unsigned long lastDisplay;       //
 unsigned long lastBlink;         //
-unsigned long currentTime;       //
+unsigned long currentTime;        //
 unsigned long timeTest;
 unsigned long func_timer; // <<<<<<<<<<< Time execution of different functions
 bool          STREAM  = false;
