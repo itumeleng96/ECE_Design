@@ -52,6 +52,26 @@ function convertBuffer(sp)
   return v
 end
 
+function findPeaks(signal,threshold)
+ indexes = Int[]
+ ind = Int[]
+ increase=0
+ for i=1:length(signal)-2
+    if(abs.(signal[i])<abs.(signal[i+1]))
+        increase=1
+    elseif (abs.(signal[i])>abs.(signal[i+1]) && increase==1)
+        append!(indexes,i)
+        increase=0
+    end
+ end
+ for i=1:length(indexes)
+    if(abs.(signal[indexes[i]]))>threshold
+      append!(ind,indexes[i])
+    end
+  end
+  ind
+end
+
 @time using SerialPorts
 @time using FFTW;
 @time using PyPlot;
@@ -148,6 +168,8 @@ V_MF_2 = H.*V_RX_2;
 v_mf_2 = ifft(V_MF_2);
 v_mf_2 = real(v_mf_2);
 
+
+
 #Create analytical signal of the 2 ADC's
 
 V_ANAL= 2*V_MF; # make a copy and double the values
@@ -181,39 +203,49 @@ f0=40000;
 v_bb_1=v_anal.*exp.(-j*2*pi*f0*t_match);
 v_bb_2=v_anal2.*exp.(-j*2*pi*f0*t_match);
 
+#Call to find Peaks
+indexes_1=findPeaks(v_bb_1,5)
+indexes_2=findPeaks(v_bb_2,5)
+
+
 #Wrapped phase difference
 delta_psi = angle.( v_bb_1 .* conj(v_bb_2))
 a=0
 b=10
 
+#Angle of Arrival calculations
+lambda=343/40000
+distance=18e-3
+theta = asin.((lambda*delta_psi)/(2*pi*distance))
+#theta = theta.*(180/pi)
+
+x=r.*cos.(theta)
+y=r.*sin.(theta)
+
 
 PyPlot.clf()
-subplot(2,2,1)
-PyPlot.plot(r,abs.(v_bb_1) )
-title("Analytical Signals")
-
-PyPlot.plot(r,abs.(v_bb_2) )
-xlim([a,b]);
-#ylim([0,0.5e9]);
-xlabel("Range in meters");
+subplot(4,1,1)
+PyPlot.plot(r,abs.(v_anal))
+title("Analytical Signal")
 PyPlot.draw()
 
-subplot(2,2,2)
-PyPlot.plot(r,angle.(v_bb_1))
-title("Angle 1")
-xlim([a,b]);
+subplot(4,1,2)
+PyPlot.plot(r,abs.(v_anal2))
 PyPlot.draw()
 
-subplot(2,2,4)
-PyPlot.plot(r,angle.(v_bb_2))
-title("Angle 2")
-xlim([a,b]);
-PyPlot.draw()
-
-subplot(2,2,3)
-PyPlot.plot(r,delta_psi)
+subplot(4,1,3)
 title("Delta PSI")
+PyPlot.plot(r,delta_psi)
+xlim([0,10])
+ylim([0,10])
+PyPlot.xlabel("Range in meters")
 PyPlot.draw()
+
+subplot(4,1,4)
+title("Arrival Angle")
+PyPlot.plot(x,y,".")
+PyPlot.draw()
+
+
 println("reading and transmitting...")
-#PyPlot.sleep(0.05)
 end
