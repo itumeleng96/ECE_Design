@@ -15,32 +15,33 @@
 #define SERIAL_PORT_SPEED     9600          // USB is always 12 Mbit/sec on teensy
 #define DEBUG                 false
 
-unsigned long lastInAvail;       //s = string(12345, base = 16)
-unsigned long lastDisplay;       //
-unsigned long lastBlink;         //
-unsigned long currentTime;        //
+unsigned long lastInAvail;       
+unsigned long lastDisplay;       
+unsigned long lastBlink;        
+unsigned long currentTime;      
 unsigned long timeTest;
-unsigned long func_timer; // <<<<<<<<<<< Time execution of different functions
+unsigned long func_timer; 		     // <<<<<<<<<<< Time execution of different functions
 bool          STREAM  = false;
 bool          VERBOSE =  true;
 bool          BINARY = true;
+
 // I/O-Pins
-const int writePin0            = A21;
-const int readPin0             = A14;
-const int readPin1             = A17;
+const int writePin0            = A21;	    //DAC 1 PIN 
+const int readPin0             = A14;       //ADC Pin 1 		
+const int readPin1             = A17;	    //ADC Pin 2		
 
 const int ledPin               = LED_BUILTIN;
 
 //ADC & DMA Config
-ADC *adc = new ADC(); //adc object
+ADC *adc = new ADC(); 			   //adc object
 DMAChannel dma0;
 DMAChannel dma1;
 // Variables for ADC0
-DMAMEM static uint16_t buf_a[BUFFER_SIZE]; // buffer a
-DMAMEM static uint16_t buf_b[BUFFER_SIZE]; // buffer b
-volatile uint8_t          aorb_busy  = 0;      //
-volatile uint8_t          a_full     = 0;      //
-volatile uint8_t          b_full     = 0;      //
+DMAMEM static uint16_t buf_a[BUFFER_SIZE];   // buffer a to store data from ADC1 
+DMAMEM static uint16_t buf_b[BUFFER_SIZE];   // buffer b to store data from ADC2 
+volatile uint8_t          aorb_busy  = 0;      
+volatile uint8_t          a_full     = 0;      
+volatile uint8_t          b_full     = 0;      
 uint32_t                    freq     = SAMPLE_RATE;
 uint8_t                     aver     = SAMPLE_AVERAGING;
 uint8_t                      res     = SAMPLE_RESOLUTION;
@@ -50,18 +51,19 @@ ADC_REFERENCE               Vref     = ADC_REFERENCE::REF_3V3;
 ADC_SAMPLING_SPEED    samp_speed     = ADC_SAMPLING_SPEED::VERY_HIGH_SPEED;
 ADC_CONVERSION_SPEED  conv_speed     = ADC_CONVERSION_SPEED::VERY_HIGH_SPEED;
 
-// Processing Buffer
+//Processing Buffer
 uint16_t processed_buf[BUFFER_SIZE]; // processed data buffer
-// Chirp pulse from serial 
+
+//Array for Chirp pulse from serial 
 char chirp[12001];
 
 void setup() { // =====================================================
 
   pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(writePin0,OUTPUT); //DAC write
-  pinMode(readPin0, INPUT); // single ended
-  pinMode(readPin1, INPUT);
-  // Setup monitor pin
+  pinMode(writePin0,OUTPUT);    //DAC1 configure
+  pinMode(readPin0, INPUT);     // ADC 1 channel 
+  pinMode(readPin1, INPUT);     // ADC 2 channel 
+ // Setup LED  pin
   pinMode(ledPin, OUTPUT);
   digitalWriteFast(ledPin, LOW); // LED low, setup start
 
@@ -75,8 +77,8 @@ void setup() { // =====================================================
   memset((void*)buf_b, 0, sizeof(buf_b));
   memset((void*)processed_buf, 0, sizeof(buf_b));
   
-  // LED on, setup complete
-  digitalWriteFast(ledPin, HIGH);
+// LED on, setup complete
+digitalWriteFast(ledPin, HIGH);
 
 } // setup =========================================================
 
@@ -88,8 +90,7 @@ boolean   chunk2_sent = false;
 boolean   chunk3_sent = false;
 
 
-void loop() { // ===================================================
-
+void loop() { // ============================================================================================
   // Keep track of loop time
   currentTime = micros();
   // p print buffer
@@ -110,38 +111,35 @@ void loop() { // ===================================================
       if ((aorb_busy == 1) || (aorb_busy == 2)) { stop_ADC(); }
           setup_ADC_single();
           start_ADC();
-      //Sending Data  to DAC
-
+	   //Sending Data  to DAC from the Chirp Pulse Array
 	    for(int i=0;i<1;i++){
 	      for(int n=0;n<12001;n++){
 	         analogWrite(writePin0,chirp[n]);
-   	    }
-    	}
-  	
-  		  wait_ADC_single();
-        stop_ADC();
-        adc->printError();
-        adc->resetError();
-        serial.print("d");
-
-      }else if (inByte == 'p') { // print buffer
+   	    	}
+	    }
+  	    wait_ADC_single();		//Method to wait for both the ADC channels and save the data in Buffers
+            stop_ADC();			//Clear the interrupts 
+            adc->printError();
+            adc->resetError();	
+            serial.print("d") 		//Send this command to the PC to notify that ADC conversion is complete
+      }
+     
+       else if (inByte == 'p') { 	// Print the first buffers on serial 
           printBuffer(buf_a, 0, BUFFER_SIZE-1);
-      }else if (inByte == 'q') { // print buffer
+      }else if (inByte == 'q') { 	// Print the second buffers on serial
           printBuffer(buf_b, 0, BUFFER_SIZE-1);
       }
     }
   }
-
-
   if ((currentTime-lastDisplay) >= DISPLAY_INTERVAL) {
     lastDisplay = currentTime;
     adc->printError();
     adc->resetError();
   }
 
-} // end loop ======================================================
+} // end loop =======================================================================================================
 
-///ADC setup //////////////////////
+///ADC SETUP ========================================================================================================
 void setup_ADC_single(void) {
   // clear buffers
   memset((void*)buf_a, 0, sizeof(buf_a));
@@ -161,16 +159,15 @@ void setup_ADC_single(void) {
   adc->setConversionSpeed(conv_speed, ADC_0);
   adc->setSamplingSpeed(samp_speed, ADC_0);      
 
-  // Initialize dma
+  // Initialize dma1
   dma0.source((volatile uint16_t&)ADC0_RA);
   dma0.destinationBuffer(buf_a, sizeof(buf_a));
   dma0.triggerAtHardwareEvent(DMAMUX_SOURCE_ADC0);
   dma0.interruptAtCompletion();
-  //dma0.disableOnCompletion();
   dma0.attachInterrupt(&dma0_isr_single);
 
   memset((void*)buf_b, 0, sizeof(buf_b));
-  // Initialize the ADC
+  // Initialize the ADC1
   if (sgain >1) { adc->enablePGA(sgain, ADC_1); }  else { adc->disablePGA(ADC_1); }
   adc->setReference(Vref, ADC_1);
   adc->setAveraging(aver,ADC_1);
@@ -186,7 +183,7 @@ void setup_ADC_single(void) {
   adc->setConversionSpeed(conv_speed, ADC_1);
   adc->setSamplingSpeed(samp_speed, ADC_1);
 
-  // Initialize dma
+  // Initialize dma2
   dma1.source((volatile uint16_t&)ADC1_RA);
   dma1.destinationBuffer(buf_b, sizeof(buf_b));
   dma1.triggerAtHardwareEvent(DMAMUX_SOURCE_ADC1);
@@ -195,6 +192,7 @@ void setup_ADC_single(void) {
   dma1.attachInterrupt(&dma1_isr_single);
 }
 
+///ADC START SAMPLING ========================================================================================================
 void start_ADC(void) {
     // Start adc
     aorb_busy  = 1;
@@ -212,7 +210,7 @@ void start_ADC(void) {
     adc->enableDMA(ADC_1); // set ADC_SC2_DMAEN
     dma1.enable();
 }
-
+///ADC STOP SAMPLING ========================================================================================================
 void stop_ADC(void) {
     PDB0_CH0C1 = 0; // diasble ADC0 pre triggers    
     dma0.disable();
@@ -226,20 +224,18 @@ void stop_ADC(void) {
     adc->adc1->stopPDB();
     aorb_busy = 0;
 }
-
+///WAIT FOR ADC SAMPLING ========================================================================================================
 void wait_ADC_single() {
   uint32_t   end_time = micros();
   uint32_t start_time = micros();
   while (!a_full && !b_full) {
     end_time = micros();
     if ((end_time - start_time) > 1100000) {
-      //Serial.printf("Timeout %d %d\n", a_full, aorb_busy);
       break;
     }
   }
-  //Serial.printf("Conversion complete in %d us\n", end_time-start_time);
 }
-
+//CLEAR DMA interrupts ========================================================================================================
 void dma0_isr_single(void) {
   aorb_busy = 0;
      a_full = 1;
@@ -252,17 +248,13 @@ void dma1_isr_single(void) {
   dma1.clearInterrupt(); // takes more than 0.5 micro seconds
   dma1.clearComplete(); // takes about ? micro seconds
 }
-//////////////////////////////////////////////////////////////
+//Methods to Print the BUFFERS on SERIAL as bytes ===========================================================================
 void printBuffer(uint16_t *buffer, size_t start, size_t end) {
   size_t i;
   if (VERBOSE) {
     for (i = start; i <= end; i++) { 
-      Serial.println(buffer[i]); 
-      //Serial.println((buffer[i] >> 8) & 0xFF); // Send the upper byte first
-      //Serial.println((buffer[i] & 0xFF));
-      
+      Serial.println(buffer[i]);     
       }
-         
   } else {
     for (i = start; i <= end; i++) {
       serial16Print(buffer[i]);
