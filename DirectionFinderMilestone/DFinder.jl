@@ -72,10 +72,11 @@ function findPeaks(signal,threshold)
   ind
 end
 
+
 @time using SerialPorts
+@time using PyPlot
 @time using FFTW;
-@time using PyPlot;
-sp = SerialPort(list_serialports()[1], 9600)  # USB port of the Teensy board for serial to connect
+sp = SerialPort(list_serialports()[1], 9600)  # port of the Teensy if connected
 
 v_tx=chirp() 	                    			      #returns chirp pulse according to specs
 s=readavailable(sp)  			                    #clear the serial buffer
@@ -84,7 +85,7 @@ PyPlot.show()
 
 #START THE LOOP
 
-@time while true
+while true
 
 #command to send  a chirp and save two ADC arrays
 write(sp,'s')
@@ -116,8 +117,10 @@ v2= convertBuffer(sp)
 #make another transmit signal at the same frequency as recieved
 dt=1/500000
 t_max=(20/343) +10E-3
+  
 t_match=collect(0:dt:t_max);
-v_tx_match =chirpMatch()
+v_tx_match = cos.(2*pi*(f*(t_match.-t_d).+0.5*K*(t_match.-t_d).^2)).*rect((t_match .-t_d)/T);
+
 r=(343 .*t_match)/2
 
 
@@ -128,6 +131,7 @@ b=zeros(len2)
 
 append!(v,b)			         #add zeros to the recieved data
 
+
 len3=length(v)-length(v_tx_match)
 c=zeros(len3)
 
@@ -135,11 +139,13 @@ append!(v_tx_match,c)		#add zeros to the created chirp that is same frequency as
 
 #MATCHED FILTER  signal Processing
 
+
 V_TX=fft(v_tx_match);
 V_RX=fft(v);
 H = conj(V_TX);
 
 # APPLY MATCHED  Filter to the simulated returns in Frequency Domain
+
 V_MF = H.*V_RX;
 v_mf = ifft(V_MF);
 v_mf = real(v_mf);
@@ -148,6 +154,7 @@ v_mf = real(v_mf);
 v2= (v2/65535).-0.62 		     #signal has to be converted to same scale as transmitted chirp
 len2=length(r)-length(v2)	 #length of recieved minus the recieved to make arrays same length
 b=zeros(len2)
+
 
 
 append!(v2,b)			         #add zeros to the recieved data
@@ -170,7 +177,7 @@ v_mf_2 = real(v_mf_2);
 
 
 
-#Create analytical signal of the 2 ADC's
+#Create analytical signal of the 2 ADC'
 
 V_ANAL= 2*V_MF; # make a copy and double the values
 N = length(V_MF);
@@ -249,3 +256,4 @@ PyPlot.draw()
 
 println("reading and transmitting...")
 end
+
