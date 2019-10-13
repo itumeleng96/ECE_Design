@@ -3,7 +3,7 @@ This repo contains all Code developed during the project and is established as p
 
 Authors:
 IJ Malemela, 
-Mpooa Moeke,tsi,
+Mpooa Moeketsi,
 Mapulane Makhaba
 
 Process for single SONAR Pinger Implementation By Group 8(Demo) 
