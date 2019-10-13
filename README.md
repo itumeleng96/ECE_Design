@@ -20,9 +20,9 @@ _Recieve the  sampled signal_
 - Use 16 Bit resolution with DMA and send over serial port Buffer 
 - Not sure about the 
 
-Direction Finder  Implementation
-Milestone 4 -Project intitiation at 30 September
-To meet the requirements of this milestone ,the previous milestone is modified to accomodate two recieving channels.
+_Direction Finder  Implementation_
+_Milestone 4 -Project_
+_The previous milestone is modified to accomodate two recieving channels_
 
 Process for the Direction Finder system
 Saved in the (Direction Finder) folder
@@ -30,14 +30,15 @@ Saved in the (Direction Finder) folder
 
 _Transmit a chirp pulse_
 
-- Chirp pulse configured with requirements-with Known length
-- Send the chirp through the serial port from the PC (Julia environment)
+- Chirp pulse is created in the julia environment with the specified requirements.
+- The  chirp  pulse is sent through the serial port from the PC (Julia environment)
 - The Teensy waits to recieve the chirp and transmit to DAC1
 
 _Recieve the  sampled signal(Echoes from objects)_ 
 
-- 2-16 Bit resolution ADC's with 2-DMA's are used to sample the echoes recieved and saved in buffer arrays. 
+- 2-16 Bit resolution ADC's with 2-DMA's are used to sample the echoes recieved and data is saved in buffer arrays. 
 - The Teensy sends the data in the buffer array to the serial Buffer.
+- The recieved data in the  Julia environment is used for signal processing 
 
 _Signal Processing_ 
 
