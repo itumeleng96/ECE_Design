@@ -2,9 +2,9 @@
 This repo contains all Code developed during the project and is established as per the requirements 
 
 Authors:
-IJ Malemela 
-Mpooa Moeketsi 
-Mapulane 
+IJ Malemela, 
+Mpooa Moeke,tsi,
+Mapulane Makhaba
 
 Process for single SONAR Pinger Implementation By Group 8(Demo) 
 Saved in the (Demo) 1D-Sonar Pinger folder
