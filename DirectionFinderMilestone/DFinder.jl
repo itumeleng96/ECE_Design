@@ -1,25 +1,25 @@
+#create a chirp Pulse to be sent to the Teensy and plot
 function chirp()
-        #create a chirp Pulse to be sent to the Teensy and plot
         B=1715                                                       #Bandwidth of the chirp signal
         f=40000                                                      #Center Frequency
         T=6E-3                                                       # Chirp Pulse length
         K=B/T                                                        # Chirp rate
         fs=2000000
-        dt=1/fs                              # The  sampling rate was found to be 2Msamples/second
-        t_max=20/343                         #max time to reach 10 meters and back is 58 miliseconds
+        dt=1/fs                             			     # The  sampling rate was found to be 2Msamples/second
+        t_max=20/343                        			     #max time to reach 10 meters and back is 58 miliseconds
         t_d=T/2;
         t_max_pulse=T;
         t = collect(0:dt:t_max_pulse);
         rect(t)=(abs.(t) .<=0.5)*1.0;
         return  UInt8.(round.((cos.(2*pi*(f*(t.-t_d).+0.5*K*(t.-t_d).^2)).*rect((t .-t_d)/T).+1).*127));
 end
-
+#create a chirp pulse at the same frequency as the recieved signal to be used for match filtering
 function chirpMatch()
         f=40000
-	      T=6E-3                                                       # Chirp Pulse length
+	T=6E-3                                                       # Chirp Pulse length
         B= 1715
-	      K=B/T                                                        # Chirp rate
-        fs=500000
+	K=B/T                                                        # Chirp rate
+        fs=500000						     #Sampling Frequency 
         dt=1/fs                                                      # The  sampling rate was found to be 2Msamples/second
         t_max=(20/343) +10E-3                                        # max time to reach 10 meters and back is 58 miliseconds
         t_d=T/2;
@@ -28,7 +28,7 @@ function chirpMatch()
         t_match=collect(0:dt:t_max);
         return cos.(2*pi*(f*(t_match.-t_d).+0.5*K*(t_match.-t_d).^2)).*rect((t_match .-t_d)/T);
 end
-
+#This function converts the data from the serial buffer from a String to sampled data in of Integers in an array
 function convertBuffer(sp)
   a=""
   i=0
@@ -52,6 +52,7 @@ function convertBuffer(sp)
   return v
 end
 
+#This function finds peaks when given a complex signal and a threshold
 function findPeaks(signal,threshold)
  indexes = Int[]
  ind = Int[]
@@ -76,31 +77,26 @@ end
 @time using SerialPorts
 @time using PyPlot
 @time using FFTW;
-sp = SerialPort(list_serialports()[1], 9600)  # port of the Teensy if connected
-
-v_tx=chirp() 	                    			      #returns chirp pulse according to specs
+sp = SerialPort(list_serialports()[1], 9600)                # port of the Teensy if connected
+v_tx=chirp() 	                    			    #returns chirp pulse according to specs
 s=readavailable(sp)  			                    #clear the serial buffer
 PyPlot.show()
 
 
-#START THE LOOP
-
+#START THE LOOP======================================================================================================
 while true
-
 #command to send  a chirp and save two ADC arrays
-write(sp,'s')
-write(sp,v_tx)
-while bytesavailable(sp)<1
+write(sp,'s')		 				  #Send a command to the teensy to wait for a chirp signal
+write(sp,v_tx)						  #Send the chirp signal over the serial port to the teensy					  
+while bytesavailable(sp)<1				  # Wait for response from the teensy 	
 	continue
 	sleep(0.005)
 end
 
-#Print the Time conversion of the ADC
-s = readavailable(sp)
+s = readavailable(sp)					  #Clear the serial Port
 
-#Get the Values with command 'p'
-write(sp,'p')
-while bytesavailable(sp)<1
+write(sp,'p')						  #Send the  command 'p' to notify teensy to print buffer 1 on serial port
+while bytesavailable(sp)<1				  # Wait for response from the teensy
 	continue
 end
 
@@ -108,8 +104,8 @@ end
 v = convertBuffer(sp)
 
 #GET THE DATA FROM ADC2 ARRAY
-write(sp,'q')
-while bytesavailable(sp)<1
+write(sp,'q')						#Send the  command 'q' to notify teensy to print buffer 1 on serial port				
+while bytesavailable(sp)<1				# Wait for response from the teensy
 	continue
 end
 v2= convertBuffer(sp)
@@ -124,12 +120,13 @@ v_tx_match = cos.(2*pi*(f*(t_match.-t_d).+0.5*K*(t_match.-t_d).^2)).*rect((t_mat
 r=(343 .*t_match)/2
 
 
-#RECIEVED  signal1  processing
+#RECIEVED  signal1  processing================================================================================================
+	
 v= (v/65535).-0.62 		     #signal has to be converted to same scale as transmitted chirp
-len2=length(r)-length(v)	 #length of recieved minus the recieved to make arrays same length
+len2=length(r)-length(v)	     #length of recieved minus the recieved to make arrays same length
 b=zeros(len2)
 
-append!(v,b)			         #add zeros to the recieved data
+append!(v,b)			     #add zeros to the recieved data
 
 
 len3=length(v)-length(v_tx_match)
@@ -137,9 +134,22 @@ c=zeros(len3)
 
 append!(v_tx_match,c)		#add zeros to the created chirp that is same frequency as recieved
 
-#MATCHED FILTER  signal Processing
 
+v2= (v2/65535).-0.62 		 #signal has to be converted to same scale as transmitted chirp
+len2=length(r)-length(v2)	 #length of recieved minus the recieved to make arrays same length
+b=zeros(len2)
 
+append!(v2,b)			         #add zeros to the recieved data
+v_tx_match =chirpMatch()
+len3=length(v2)-length(v_tx_match)
+c=zeros(len3)
+
+append!(v_tx_match,c)		#add zeros to the created chirp that is same frequency as recieved
+
+	
+#MATCHED FILTER  signal Processing=============================================================================================
+
+#RECIEVED SIGNAL1 PROCESSING
 V_TX=fft(v_tx_match);
 V_RX=fft(v);
 H = conj(V_TX);
@@ -151,21 +161,6 @@ v_mf = ifft(V_MF);
 v_mf = real(v_mf);
 
 #RECIEVED SIGNAL2 PROCESSING
-v2= (v2/65535).-0.62 		     #signal has to be converted to same scale as transmitted chirp
-len2=length(r)-length(v2)	 #length of recieved minus the recieved to make arrays same length
-b=zeros(len2)
-
-
-
-append!(v2,b)			         #add zeros to the recieved data
-v_tx_match =chirpMatch()
-len3=length(v2)-length(v_tx_match)
-c=zeros(len3)
-
-append!(v_tx_match,c)		#add zeros to the created chirp that is same frequency as recieved
-
-#MATCHED FILTER  signal Processing
-
 V_TX=fft(v_tx_match);
 V_RX_2=fft(v2);
 H = conj(V_TX);
@@ -175,9 +170,7 @@ V_MF_2 = H.*V_RX_2;
 v_mf_2 = ifft(V_MF_2);
 v_mf_2 = real(v_mf_2);
 
-
-
-#Create analytical signal of the 2 ADC'
+#Create analytical signal of the 2 ADCs==========================================================================================
 
 V_ANAL= 2*V_MF; # make a copy and double the values
 N = length(V_MF);
@@ -204,7 +197,7 @@ V_ANAL_2[neg_freq_range] .= 0; # Zero out neg components in 2nd half of
 v_anal2 = ifft(V_ANAL_2);
 
 
-#Baseband calculations
+#Baseband calculations ===========================================================================================================
 j=im;
 f0=40000;
 v_bb_1=v_anal.*exp.(-j*2*pi*f0*t_match);
@@ -229,17 +222,19 @@ theta = asin.((lambda*delta_psi)/(2*pi*distance))
 x=r.*cos.(theta)
 y=r.*sin.(theta)
 
-
+#Plot the reciever 1 analytical signal 
 PyPlot.clf()
 subplot(4,1,1)
 PyPlot.plot(r,abs.(v_anal))
 title("Analytical Signal")
 PyPlot.draw()
 
+#Plot the reciever 2 analytical signal 	
 subplot(4,1,2)
 PyPlot.plot(r,abs.(v_anal2))
 PyPlot.draw()
 
+#Plot the phase difference 
 subplot(4,1,3)
 title("Delta PSI")
 PyPlot.plot(r,delta_psi)
@@ -248,6 +243,7 @@ ylim([0,10])
 PyPlot.xlabel("Range in meters")
 PyPlot.draw()
 
+#Plot the  angle of arrival 
 subplot(4,1,4)
 title("Arrival Angle")
 PyPlot.plot(x,y,".")
